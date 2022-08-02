@@ -7,11 +7,17 @@ use openssl::{
 
 extern crate openssl;
 
+#[derive(Debug, Clone)]
 pub struct KeySig {
     keypair: Rsa<Private>,
 }
 
 impl KeySig {
+    //  Get public key
+    pub fn get_public_key(&self) -> Vec<u8> {
+        self.keypair.clone()
+            .public_key_to_pem().unwrap()
+    }
     //  Generate key pairs and signature
     pub fn new() -> Self {
         //  Generate keypair
@@ -68,5 +74,15 @@ mod tests {
         let signature = keysig.sign(data);
 
         assert!(keysig.verify(data, &signature));
+    }
+
+    #[test]
+    fn test_get_public_key() {
+        let keysig = KeySig::new();
+        let pub_key = keysig.get_public_key();
+        let str_pub_key = String::from_utf8(
+            pub_key).unwrap();
+
+        assert!(!str_pub_key.is_empty())
     }
 }
