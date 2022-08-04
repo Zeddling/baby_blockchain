@@ -2,6 +2,7 @@ use crate::keysig::KeySig;
 
 //  A droneport stores key pairs of the drones
 // that belong to it
+#[derive(Clone)]
 pub struct Account {
     id: Vec<u8>,
     wallets: Vec<KeySig>,
@@ -26,6 +27,10 @@ impl Account {
     pub fn sign_data(&self, data: String, i: usize) -> Vec<u8> {
         self.wallets[i]
             .sign(data.as_bytes())
+    }
+    
+    pub fn get_keysig(&self, i: usize) -> KeySig {
+        self.wallets[i].clone()
     }
 }
 
