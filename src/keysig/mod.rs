@@ -4,6 +4,9 @@ use openssl::{
     rsa::Rsa,
     sign::{Signer, Verifier},
 };
+use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
+use serde::de::{Error, MapAccess, SeqAccess, Visitor};
+use serde::ser::SerializeStruct;
 
 extern crate openssl;
 
@@ -53,8 +56,36 @@ impl KeySig {
     }
 }
 
+impl ToString for KeySig {
+    fn to_string(&self) -> String {
+        let public_key = self.keypair.public_key_to_pem().unwrap();
+        let private_key = self.keypair.private_key_to_pem().unwrap();
+
+        format!(
+            "{}\n{}",
+            hex::encode(private_key),
+            hex::encode(public_key)
+        )
+    }
+}
+
+impl Serialize for KeySig {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+        let pub_key = hex::encode(self.get_public_key());
+        let priv_key = hex::encode(
+            self.keypair.private_key_to_pem().unwrap()
+        );
+
+        let mut state = serializer.serialize_struct("KeySig", 2)?;
+        state.serialize_field("public key", &pub_key)?;
+        state.serialize_field("private key", &priv_key)?;
+        state.end()
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use serde_test::{assert_tokens, Token};
     use super::KeySig;
 
     #[test]
@@ -85,4 +116,5 @@ mod tests {
 
         assert!(!str_pub_key.is_empty())
     }
+
 }
