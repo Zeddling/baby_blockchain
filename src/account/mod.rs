@@ -1,22 +1,32 @@
+use std::collections::HashMap;
+use serde::Serialize;
+
 use crate::keysig::KeySig;
 
-//  A droneport stores key pairs of the drones
-// that belong to it
-#[derive(Clone)]
+/**
+    A droneport stores key pairs of the drones
+    that belong to it.
+    A drone represents a coin
+ */
+#[derive(Clone, Serialize)]
 pub struct Account {
-    id: Vec<u8>,
+    id: String,
     wallets: Vec<KeySig>,
+    balance: u8
 }
 
 impl Account {
     pub fn gen_account() -> Self {
         let keypair = KeySig::new();
 
-        let public_key = keypair.get_public_key();
+        let public_key = hex::encode(
+            keypair.get_public_key()
+        );
 
         Account {
             id: public_key,
             wallets: vec![keypair],
+            balance: 0
         }
     }
 
@@ -32,19 +42,53 @@ impl Account {
     pub fn get_keysig(&self, i: usize) -> KeySig {
         self.wallets[i].clone()
     }
+
+    pub fn get_balance(&self) -> u8 {
+        self.balance
+    }
+
+    pub fn update_balance(&mut self, balance: u8) {
+        self.balance = balance;
+    }
+
+    pub fn print_balance(&self) {
+        println!("Balance: {}", self.balance);
+    }
+
+    pub fn get_id(&self) -> String {
+        self.id.clone()
+    }
+}
+
+impl ToString for Account {
+    fn to_string(&self) -> String {
+        let id = hex::encode(self.id.clone());
+
+        let mut wallet: HashMap<usize, String> = HashMap::new();
+        for i in 0..self.wallets.len() {
+            wallet.insert(
+                i,
+                self.wallets[i].to_string()
+            );
+        }
+        format!(
+            "{}\n{}\n{}",
+            id,
+            serde_json::to_string(&wallet).unwrap(),
+            self.balance
+        )
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::KeySig;
+    use crate::keysig::KeySig;
     use super::Account;
 
     //  Expects keysig added and id generated
     #[test]
     fn test_account_created() {
         let account = Account::gen_account();
-        assert!(!String::from_utf8(account.id).unwrap()
-            .is_empty());
         assert!(account.wallets[0]
             .to_string()
             .contains("-----BEGIN RSA PRIVATE KEY-----"))
@@ -74,4 +118,24 @@ mod tests {
                 .verify(b"Hello World", &signature)
         );
     }
+
+    #[test]
+    fn test_update_balance() {
+        let mut account = Account::gen_account();
+        let prev = account.get_balance();
+        let new_bal = prev + 1;
+        account.update_balance(new_bal);
+
+        assert!(
+            prev < account.get_balance()
+        );
+    }
+
+    #[test]
+    fn test_get_balance() {
+        let account = Account::gen_account();
+        let b = account.get_balance();
+        assert_eq!(b, 1);
+    }
+
 }
